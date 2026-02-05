@@ -301,24 +301,43 @@ function renderThumbnail(album, images) {
       
       const blob = await response.blob();
       
+      // 嘗試轉換為 PNG（更廣泛支援）
+      let clipboardBlob = blob;
+      if (blob.type !== 'image/png') {
+        try {
+          // 創建 canvas 轉換為 PNG
+          const img = await createImageBitmap(blob);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          clipboardBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        } catch {
+          // 如果轉換失敗，使用原始 blob
+          clipboardBlob = blob;
+        }
+      }
+      
       // 寫入剪貼簿
       await navigator.clipboard.write([
         new ClipboardItem({
-          [blob.type]: blob
+          'image/png': clipboardBlob
         })
       ]);
       
-      // 成功提示（可選）
-      console.log('圖片已複製');
+      // 成功後關閉選單並移除焦點
+      closeMenu();
+      menuButton.blur();
     } catch (error) {
       console.error('複製錯誤:', error);
       
-      // 如果是 CORS 錯誤或不支援，嘗試複製 URL 作為備用
+      // Fallback: 複製 URL
       try {
         await navigator.clipboard.writeText(url);
         alert("無法複製圖片，已複製圖片網址到剪貼簿。");
       } catch {
-        alert("複製失敗。此功能需要圖片伺服器支援跨域存取（CORS）。");
+        alert("複製失敗。建議改用【另存圖片】或【開啟圖片】功能。");
       }
     }
   }
@@ -330,6 +349,10 @@ function renderThumbnail(album, images) {
   }
 
   function closeMenu() {
+    // 先移除焦點避免 aria-hidden 警告
+    if (document.activeElement && menu.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
     menu.classList.remove("open");
     menu.setAttribute("aria-hidden", "true");
   }

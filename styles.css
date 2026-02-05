@@ -230,6 +230,10 @@ h2, h3 {
   align-items: stretch;
 }
 
+.album-item > div {
+  flex-shrink: 0;
+}
+
 .album-btn {
   flex: 1;
   min-width: 0;
