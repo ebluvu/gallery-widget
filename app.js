@@ -13,6 +13,8 @@ const state = {
   images: [],
 };
 
+let pickr = null;
+
 const ui = {
   emailInput: document.getElementById("emailInput"),
   signInForm: document.getElementById("signInForm"),
@@ -191,6 +193,9 @@ async function loadAlbum(albumId) {
   ui.albumTitle.value = data.title || "";
   ui.themeSelect.value = data.theme || "slideshow";
   ui.bgColor.value = data.background_color || "#101828";
+  if (pickr) {
+    pickr.setColor(data.background_color || "#101828");
+  }
   ui.addNewSelect.value = data.add_new_first ? "first" : "last";
   await loadImages();
   updateEmbed();
@@ -251,7 +256,7 @@ function renderImages() {
     if (state.album) {
       const remove = document.createElement("button");
       remove.className = "btn ghost";
-      remove.textContent = "刪除";
+      remove.textContent = "×";
       remove.addEventListener("click", () => deleteImage(image));
       actions.appendChild(remove);
     }
@@ -309,7 +314,10 @@ function handleDrop(e) {
     state.images.splice(toIndex, 0, movedItem);
     
     // 更新数据库
-    updateImageOrder();
+    (async () => {
+      await updateImageOrder();
+      updateEmbed();
+    })();
     
     // 重新渲染
     renderImages();
@@ -422,6 +430,7 @@ async function updateSettings() {
     return;
   }
 
+  const oldTitle = state.album.title;
   const payload = {
     title: ui.albumTitle.value.trim() || "未命名",
     theme: ui.themeSelect.value,
@@ -441,8 +450,11 @@ async function updateSettings() {
 
   state.album = { ...state.album, ...payload };
   updateEmbed();
-  // 更新設定時刷新相簿列表(因為標題可能有改變)
-  await loadAlbums();
+  
+  // 只在標題改變時刷新相簿列表以避免過度重繪
+  if (oldTitle !== payload.title) {
+    await loadAlbums();
+  }
 }
 
 function updateEmbed() {
@@ -536,6 +548,7 @@ async function uploadImages(files) {
   }
 
   await loadImages();
+  updateEmbed();
   setStatus("上傳完成。");
 }
 
@@ -571,7 +584,6 @@ ui.newAlbumBtn.addEventListener("click", createAlbum);
 ui.fileInput.addEventListener("change", (event) => uploadImages([...event.target.files]));
 ui.albumTitle.addEventListener("change", updateSettings);
 ui.themeSelect.addEventListener("change", updateSettings);
-ui.bgColor.addEventListener("change", updateSettings);
 ui.addNewSelect.addEventListener("change", updateSettings);
 ui.embedCode.addEventListener("click", () => ui.embedCode.select());
 ui.shareLink.addEventListener("click", () => ui.shareLink.select());
@@ -587,6 +599,34 @@ supabase.auth.onAuthStateChange((event, session) => {
     setStatus("缺少 Supabase 設定。");
     return;
   }
+  
+  // Initialize Pickr color picker
+  pickr = new Pickr({
+    el: "#bgColorPickr",
+    theme: "classic",
+    default: "#101828",
+    components: {
+      preview: true,
+      opacity: true,
+      hue: true,
+      interaction: {
+        hex: true,
+        rgba: true,
+        hsla: true,
+        hsva: true,
+        cmyk: true,
+        input: true,
+        clear: true,
+        save: true,
+      },
+    },
+  });
+  
+  pickr.on("save", (color) => {
+    ui.bgColor.value = color.toRGBA().toString();
+    updateSettings();
+  });
+  
   await refreshAuth();
   await loadAlbums();
 })();

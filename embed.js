@@ -128,7 +128,14 @@ function renderSlideshow(album, images) {
     currentIndex = (currentIndex + 1) % images.length;
     goToSlide(currentIndex);
   });
-  
+
+  // 點擊大圖自動輪替到下一張
+  mainImage.addEventListener("click", () => {
+    currentIndex = (currentIndex + 1) % images.length;
+    goToSlide(currentIndex);
+  });
+  mainImage.style.cursor = "pointer";
+
   container.appendChild(imageWrapper);
   container.appendChild(prevBtn);
   container.appendChild(nextBtn);
@@ -174,12 +181,15 @@ function renderThumbnail(album, images) {
   const thumbBar = document.createElement("div");
   thumbBar.className = "thumbnail-bar";
   
+  let currentIndex = 0;
+  
   images.forEach((image, i) => {
     const thumb = document.createElement("img");
     thumb.className = i === 0 ? "thumbnail active" : "thumbnail";
     thumb.src = supabase.storage.from(BUCKET).getPublicUrl(image.path).data.publicUrl;
     thumb.alt = image.caption || "";
     thumb.addEventListener("click", () => {
+      currentIndex = i;
       mainImage.src = supabase.storage.from(BUCKET).getPublicUrl(image.path).data.publicUrl;
       mainImage.alt = image.caption || "";
       caption.textContent = image.caption || "";
@@ -189,6 +199,19 @@ function renderThumbnail(album, images) {
     });
     thumbBar.appendChild(thumb);
   });
+  
+  // 點擊大圖自動輪替到下一張
+  mainImage.addEventListener("click", () => {
+    currentIndex = (currentIndex + 1) % images.length;
+    const nextImage = images[currentIndex];
+    mainImage.src = supabase.storage.from(BUCKET).getPublicUrl(nextImage.path).data.publicUrl;
+    mainImage.alt = nextImage.caption || "";
+    caption.textContent = nextImage.caption || "";
+    thumbBar.querySelectorAll(".thumbnail").forEach((t, j) => {
+      t.classList.toggle("active", j === currentIndex);
+    });
+  });
+  mainImage.style.cursor = "pointer";
   
   thumbContainer.appendChild(thumbBar);
   
