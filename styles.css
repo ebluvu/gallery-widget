@@ -641,7 +641,7 @@ h2, h3 {
 }
 
 .thumbnail-bar::-webkit-scrollbar {
-  height: 4px !important;
+  height: 1px !important;
 }
 
 .thumbnail-bar::-webkit-scrollbar-track {
