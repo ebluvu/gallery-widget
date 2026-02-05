@@ -35,8 +35,6 @@ const ui = {
   signInBtn: document.getElementById("signInBtn"),
   signOutBtn: document.getElementById("signOutBtn"),
   userBadge: document.getElementById("userBadge"),
-  newAlbumBtn: document.getElementById("newAlbumBtn"),
-  albumTitle: document.getElementById("albumTitle"),
   albumList: document.getElementById("albumList"),
   fileInput: document.getElementById("fileInput"),
   uploadLog: document.getElementById("uploadLog"),
@@ -110,7 +108,7 @@ async function loadAlbums() {
     return;
   }
 
-  const { data, error } = await supabase
+  const { data: albums, error } = await supabase
     .from("albums")
     .select("id, title, created_at")
     .eq("owner_id", state.user.id)
@@ -125,31 +123,76 @@ async function loadAlbums() {
     return;
   }
 
-  if (!data.length) {
+  if (!albums.length) {
     const info = document.createElement("div");
     info.className = "muted";
-    info.textContent = "沒有相簿。請在登入狀態下建立新相簿。";
+    info.textContent = "尚無相簿。上傳圖片會自動建立新相簿。";
     ui.albumList.appendChild(info);
     return;
   }
 
-  data.forEach((album) => {
-    const item = document.createElement("div");
-    item.className = "album-item";
-    
-    const btn = document.createElement("button");
-    btn.textContent = album.title || "未命名";
-    btn.className = "album-btn";
+  for (const album of albums) {
+    // 获取该相册的前4张图片
+    const { data: images } = await supabase
+      .from("images")
+      .select("path")
+      .eq("album_id", album.id)
+      .order("sort_order", { ascending: true })
+      .limit(4);
+
+    const card = document.createElement("div");
+    card.className = "album-card";
+    card.dataset.albumId = album.id;
     if (state.album && state.album.id === album.id) {
-      btn.classList.add("active");
+      card.classList.add("selected");
     }
-    btn.addEventListener("click", () => loadAlbum(album.id));
+
+    // 封面预览
+    const preview = document.createElement("div");
+    preview.className = `album-card-preview count-${Math.min(images?.length || 0, 4)}`;
     
+    if (images && images.length > 0) {
+      images.slice(0, 4).forEach((img) => {
+        const imgEl = document.createElement("img");
+        imgEl.src = supabase.storage.from(BUCKET).getPublicUrl(img.path).data.publicUrl;
+        preview.appendChild(imgEl);
+      });
+    } else {
+      preview.style.background = "rgba(255,255,255,0.05)";
+    }
+
+    // 可编辑标题
+    const input = document.createElement("input");
+    input.className = "field";
+    input.value = album.title || "";
+    input.placeholder = "相簿名稱";
+    input.addEventListener("click", (e) => e.stopPropagation());
+    input.addEventListener("change", async () => {
+      const newTitle = input.value.trim();
+      const { error } = await supabase
+        .from("albums")
+        .update({ title: newTitle })
+        .eq("id", album.id);
+      if (error) {
+        setStatus(error.message);
+      } else if (state.album && state.album.id === album.id) {
+        state.album.title = newTitle;
+        updateEmbed();
+      }
+    });
+
+    // 删除按钮
     const actions = document.createElement("div");
     const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "×";
-    deleteBtn.className = "btn ghost album-delete-btn";
-    deleteBtn.title = "刪除相簿";
+    deleteBtn.className = "btn ghost";
+    deleteBtn.textContent = "✕";
+    deleteBtn.style.fontSize = "18px";
+    deleteBtn.style.width = "32px";
+    deleteBtn.style.height = "32px";
+    deleteBtn.style.padding = "0";
+    deleteBtn.style.display = "flex";
+    deleteBtn.style.alignItems = "center";
+    deleteBtn.style.justifyContent = "center";
     deleteBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (confirm(`確定要刪除相簿「${album.title || '未命名'}」嗎？這會刪除所有圖片。`)) {
@@ -157,15 +200,40 @@ async function loadAlbums() {
       }
     });
     actions.appendChild(deleteBtn);
-    
-    item.appendChild(btn);
-    item.appendChild(actions);
-    ui.albumList.appendChild(item);
-  });
+
+    // 点击卡片选中相册
+    card.addEventListener("click", () => {
+      loadAlbum(album.id);
+    });
+
+    card.appendChild(preview);
+    card.appendChild(input);
+    card.appendChild(actions);
+    ui.albumList.appendChild(card);
+  }
 }
 
-async function createAlbum() {
-  const title = ui.albumTitle.value.trim() || "未命名";
+async function createAlbum(title) {
+  // 如果没有提供标题，自动生成
+  if (!title) {
+    const { data: albums } = await supabase
+      .from("albums")
+      .select("title")
+      .eq("owner_id", state.user ? state.user.id : null)
+      .like("title", "相簿-%");
+    
+    let maxNum = 0;
+    if (albums) {
+      albums.forEach(album => {
+        const match = album.title.match(/^相簿-(\d+)$/);
+        if (match) {
+          maxNum = Math.max(maxNum, parseInt(match[1]));
+        }
+      });
+    }
+    title = `相簿-${maxNum + 1}`;
+  }
+
   const payload = {
     id: newId(),
     title,
@@ -183,19 +251,17 @@ async function createAlbum() {
 
   if (error) {
     setStatus(error.message);
-    return;
+    return null;
   }
 
   state.album = data;
-  ui.albumTitle.value = data.title || "";
   ui.themeSelect.value = data.theme || "slideshow";
   ui.bgColor.value = data.background_color || "#101828";
   ui.addNewSelect.value = data.add_new_first ? "first" : "last";
   await loadImages();
   updateEmbed();
-  setStatus("相簿已建立，請上傳圖片。");
-  // 创建后需要刷新相簿列表
   await loadAlbums();
+  return data;
 }
 
 async function loadAlbum(albumId) {
@@ -211,7 +277,6 @@ async function loadAlbum(albumId) {
   }
 
   state.album = data;
-  ui.albumTitle.value = data.title || "";
   ui.themeSelect.value = data.theme || "slideshow";
   ui.bgColor.value = data.background_color || "#101828";
   if (pickr) {
@@ -220,8 +285,15 @@ async function loadAlbum(albumId) {
   ui.addNewSelect.value = data.add_new_first ? "first" : "last";
   await loadImages();
   updateEmbed();
-  // 加载相簿时重绘相簿列表以更新高亮状态
-  await loadAlbums();
+  
+  // 手動更新選中狀態（避免重繪整個列表）
+  document.querySelectorAll(".album-card").forEach(card => {
+    if (card.dataset.albumId === albumId) {
+      card.classList.add("selected");
+    } else {
+      card.classList.remove("selected");
+    }
+  });
 }
 
 async function loadImages() {
@@ -455,7 +527,6 @@ async function deleteAlbum(albumId) {
   if (state.album && state.album.id === albumId) {
     state.album = null;
     state.images = [];
-    ui.albumTitle.value = "";
     ui.imageList.innerHTML = "";
     updateEmbed();
   }
@@ -469,9 +540,7 @@ async function updateSettings() {
     return;
   }
 
-  const oldTitle = state.album.title;
   const payload = {
-    title: ui.albumTitle.value.trim() || "未命名",
     theme: ui.themeSelect.value,
     background_color: ui.bgColor.value.trim() || "#101828",
     add_new_first: ui.addNewSelect.value === "first",
@@ -489,11 +558,6 @@ async function updateSettings() {
 
   state.album = { ...state.album, ...payload };
   updateEmbed();
-  
-  // 只在標題改變時刷新相簿列表以避免過度重繪
-  if (oldTitle !== payload.title) {
-    await loadAlbums();
-  }
 }
 
 function updateEmbed() {
@@ -543,9 +607,13 @@ async function prepareImage(file) {
 }
 
 async function uploadImages(files) {
+  // 如果没有选中相册，自动创建一个
   if (!state.album) {
-    setStatus("請先建立相簿。");
-    return;
+    setStatus("自動建立新相簿...");
+    const album = await createAlbum();
+    if (!album) {
+      return;
+    }
   }
 
   const baseOrder = state.images.length
@@ -633,9 +701,7 @@ ui.signOutBtn.addEventListener("click", async () => {
   updateEmbed();
 });
 
-ui.newAlbumBtn.addEventListener("click", createAlbum);
 ui.fileInput.addEventListener("change", (event) => uploadImages([...event.target.files]));
-ui.albumTitle.addEventListener("change", updateSettings);
 ui.themeSelect.addEventListener("change", updateSettings);
 ui.addNewSelect.addEventListener("change", updateSettings);
 ui.embedCode.addEventListener("click", () => ui.embedCode.select());

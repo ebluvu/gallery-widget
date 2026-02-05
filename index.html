@@ -34,36 +34,23 @@
   <main class="shell">
     <section class="card">
       <div class="card-head">
-        <h2>建立相簿</h2>
-        <p class="muted">匿名建立相簿後即可嵌入，關閉網站後無法再編輯。</p>
+        <h3>上傳圖片</h3>
+        <p class="muted">支援多張圖片。若未選擇相簿會自動建立新相簿，否則加入已選相簿。</p>
       </div>
-      <div class="row">
-        <button id="newAlbumBtn" class="btn primary">建立新相簿</button>
-        <input id="albumTitle" class="field" type="text" placeholder="相簿標題" />
-      </div>
+      <label class="dropzone">
+        <input id="fileInput" type="file" accept="image/*" multiple />
+        <span>拖曳圖片到此處或點擊上傳</span>
+      </label>
+      <div id="uploadLog" class="log"></div>
       <div id="status" class="status"></div>
     </section>
 
-    <section class="grid">
-      <div class="card">
-        <div class="card-head">
-          <h3>我的相簿</h3>
-          <p class="muted">登入後會顯示可編輯的相簿。</p>
-        </div>
-        <div id="albumList" class="list"></div>
+    <section class="card">
+      <div class="card-head">
+        <h3>我的相簿</h3>
+        <p class="muted">點擊相簿選擇，即可編輯名稱、上傳圖片。登入後會顯示可編輯的相簿。</p>
       </div>
-
-      <div class="card">
-        <div class="card-head">
-          <h3>上傳圖片</h3>
-          <p class="muted">支援多張圖片，上傳後會加入當前相簿。</p>
-        </div>
-        <label class="dropzone">
-          <input id="fileInput" type="file" accept="image/*" multiple />
-          <span>拖曳圖片到此處或點擊上傳</span>
-        </label>
-        <div id="uploadLog" class="log"></div>
-      </div>
+      <div id="albumList" class="albums"></div>
     </section>
 
     <section class="card">
