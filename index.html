@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gallery Widget v1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <header class="shell">
+    <div class="brand">
+      <div class="logo">GW</div>
+      <div>
+        <p class="eyebrow">Embeddable Gallery</p>
+        <h1>Gallery Widget v1</h1>
+      </div>
+    </div>
+    <div class="auth">
+      <div id="signInForm">
+        <input id="emailInput" class="field" type="email" placeholder="your@email.com" style="width:200px" />
+        <button id="signInBtn" class="btn ghost">Send Magic Link</button>
+      </div>
+      <button id="signOutBtn" class="btn ghost hidden">Logout</button>
+      <div id="userBadge" class="badge"></div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="card">
+      <div class="card-head">
+        <h2>Create</h2>
+        <p class="muted">匿名建立相簿後即可嵌入，關閉網站後無法再編輯。</p>
+      </div>
+      <div class="row">
+        <button id="newAlbumBtn" class="btn primary">New Album</button>
+        <input id="albumTitle" class="field" type="text" placeholder="Album title" />
+      </div>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <div class="card-head">
+          <h3>Your Albums</h3>
+          <p class="muted">登入後會顯示可編輯的相簿。</p>
+        </div>
+        <div id="albumList" class="list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Upload</h3>
+          <p class="muted">支援多張圖片，上傳後會加入當前相簿。</p>
+        </div>
+        <label class="dropzone">
+          <input id="fileInput" type="file" accept="image/*" multiple />
+          <span>Drop images or click to upload</span>
+        </label>
+        <div id="uploadLog" class="log"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h3>Embed & Share</h3>
+        <p class="muted">生成 iframe 或直接分享連結。</p>
+      </div>
+      <div class="row">
+        <div>
+          <label class="label">Embed iframe</label>
+          <textarea id="embedCode" class="field mono" rows="3" readonly></textarea>
+        </div>
+        <div>
+          <label class="label">Public link</label>
+          <textarea id="shareLink" class="field mono" rows="2" readonly></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <div class="card-head">
+          <h3>Settings</h3>
+          <p class="muted">這些設定會套用到嵌入頁面。</p>
+        </div>
+        <div class="row">
+          <div>
+            <label class="label">Theme</label>
+            <select id="themeSelect" class="field">
+              <option value="grid">Grid</option>
+              <option value="stack">Stack</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Background</label>
+            <input id="bgColor" class="field" type="color" value="#101828" />
+          </div>
+          <div>
+            <label class="label">Add new images</label>
+            <select id="addNewSelect" class="field">
+              <option value="last">Last</option>
+              <option value="first">First</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Images</h3>
+          <p class="muted">可編輯 caption，登入時可刪除。</p>
+        </div>
+        <div id="imageList" class="images"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
