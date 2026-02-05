@@ -77,6 +77,9 @@ function currentEmbedUrl() {
   }
   const url = new URL("embed.html", window.location.href);
   url.searchParams.set("album", state.album.id);
+  if (state.user) {
+    url.searchParams.set("owner", "1");
+  }
   return url.toString();
 }
 
@@ -91,10 +94,12 @@ function renderAuth() {
     ui.signInForm.classList.add("hidden");
     ui.signOutBtn.classList.remove("hidden");
     ui.userBadge.textContent = state.user.email || "已登入";
+    document.getElementById("albumSection").classList.remove("hidden");
   } else {
     ui.signInForm.classList.remove("hidden");
     ui.signOutBtn.classList.add("hidden");
     ui.userBadge.textContent = "未登入";
+    document.getElementById("albumSection").classList.add("hidden");
   }
 }
 
@@ -218,22 +223,27 @@ async function loadAlbums() {
 async function createAlbum(title) {
   // 如果没有提供标题，自动生成
   if (!title) {
-    const { data: albums } = await supabase
-      .from("albums")
-      .select("title")
-      .eq("owner_id", state.user ? state.user.id : null)
-      .like("title", "相簿-%");
-    
-    let maxNum = 0;
-    if (albums) {
-      albums.forEach(album => {
-        const match = album.title.match(/^相簿-(\d+)$/);
-        if (match) {
-          maxNum = Math.max(maxNum, parseInt(match[1]));
-        }
-      });
+    // 匿名用户使用固定名称
+    if (!state.user) {
+      title = "我的相簿";
+    } else {
+      const { data: albums } = await supabase
+        .from("albums")
+        .select("title")
+        .eq("owner_id", state.user.id)
+        .like("title", "相簿-%");
+      
+      let maxNum = 0;
+      if (albums) {
+        albums.forEach(album => {
+          const match = album.title.match(/^相簿-(\d+)$/);
+          if (match) {
+            maxNum = Math.max(maxNum, parseInt(match[1]));
+          }
+        });
+      }
+      title = `相簿-${maxNum + 1}`;
     }
-    title = `相簿-${maxNum + 1}`;
   }
 
   const payload = {
@@ -666,7 +676,10 @@ async function uploadImages(files) {
   }
 
   await loadImages();
-  await loadAlbums();
+  // 只有登入用戶才刷新相簿列表（匿名用戶不需要相簿管理功能）
+  if (state.user) {
+    await loadAlbums();
+  }
   updateEmbed();
   setStatus("上傳完成。");
 }

@@ -15,6 +15,11 @@ function getAlbumId() {
   return params.get("album");
 }
 
+function isOwner() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("owner") === "1";
+}
+
 // 通用工具函數
 function openBuilder() {
   window.open("https://ebluvu.github.io/gallery-widget-v1/", "_blank", "noopener");
@@ -185,7 +190,7 @@ function renderSlideshow(album, images) {
   
   const title = document.createElement("h1");
   title.className = "slideshow-title";
-  title.textContent = album.title || "Gallery";
+  title.textContent = isOwner() ? album.title || "" : "";
   
   const caption = document.createElement("p");
   caption.className = "slideshow-caption";
@@ -343,7 +348,7 @@ function renderThumbnail(album, images) {
   
   const title = document.createElement("h1");
   title.className = "thumbnail-title";
-  title.textContent = album.title || "Gallery";
+  title.textContent = isOwner() ? album.title || "" : "";
   
   const caption = document.createElement("p");
   caption.className = "thumbnail-caption";
