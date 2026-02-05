@@ -497,7 +497,10 @@ function updateEmbed() {
 
   ui.shareLink.value = url;
   ui.embedCode.value = `<iframe src="${url}" width="700" height="420" frameborder="0" allowfullscreen></iframe>`;
-  ui.embedPreview.src = url;
+  // 添加时间戳强制刷新预览缓存
+  const previewUrl = new URL(url);
+  previewUrl.searchParams.set('_t', Date.now());
+  ui.embedPreview.src = previewUrl.toString();
 }
 
 async function prepareImage(file) {
