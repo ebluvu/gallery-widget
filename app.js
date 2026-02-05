@@ -393,7 +393,7 @@ ui.signInBtn.addEventListener("click", async () => {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${window.location.origin}/albumizr.com/gallery-widget-v1/index.html`,
+      emailRedirectTo: window.location.href.split('#')[0].split('?')[0],
     },
   });
   
