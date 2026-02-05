@@ -322,21 +322,27 @@ h2, h3 {
 }
 
 .album-card input {
-  padding: 8px;
+  padding: 8px 12px;
   border: none;
-  background: transparent;
+  background: rgba(16, 24, 40, 0.8);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   resize: none;
   min-height: 48px;
+  flex-shrink: 0;
+}
+
+.album-card input:focus {
+  outline: 1px solid var(--accent);
+  background: rgba(16, 24, 40, 0.95);
 }
 
 .album-card input::placeholder {
   color: var(--muted);
 }
 
-.album-card > div {
+.album-card .album-actions {
   position: absolute;
   top: 8px;
   right: 8px;

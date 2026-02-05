@@ -183,6 +183,7 @@ async function loadAlbums() {
 
     // 删除按钮
     const actions = document.createElement("div");
+    actions.className = "album-actions";
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "btn ghost";
     deleteBtn.textContent = "✕";
@@ -708,9 +709,15 @@ ui.embedCode.addEventListener("click", () => ui.embedCode.select());
 ui.shareLink.addEventListener("click", () => ui.shareLink.select());
 
 supabase.auth.onAuthStateChange((event, session) => {
-  state.user = session?.user || null;
-  renderAuth();
-  loadAlbums();
+  const newUserId = session?.user?.id || null;
+  const oldUserId = state.user?.id || null;
+  
+  // 只有在用户真正变化时才重新加载（避免页面刷新时重复加载）
+  if (newUserId !== oldUserId) {
+    state.user = session?.user || null;
+    renderAuth();
+    loadAlbums();
+  }
 });
 
 (async function init() {
