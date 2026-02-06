@@ -500,7 +500,7 @@ function renderThumbnail(album, images) {
     const thumb = document.createElement("img");
     thumb.className = i === 0 ? "thumbnail active" : "thumbnail";
     thumb.dataset.index = i;
-    thumb.src = getImageUrl(image.path, { preview: true, quality: '50' });
+    thumb.src = getImageUrl(image.path, { preview: true, quality: '20' });
     thumb.alt = image.caption || "";
     thumb.addEventListener("click", () => {
       currentIndex = i;

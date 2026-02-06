@@ -188,7 +188,7 @@ async function loadAlbums() {
     if (images && images.length > 0) {
       images.slice(0, 5).forEach((img) => {
         const imgEl = document.createElement("img");
-        imgEl.src = getImageUrl(img.path, { preview: true, quality: '50' });
+        imgEl.src = getImageUrl(img.path, { preview: true, quality: '30' });
         preview.appendChild(imgEl);
       });
     } else {
@@ -375,7 +375,7 @@ function renderImages() {
     card.dataset.index = index;
 
     const img = document.createElement("img");
-    img.src = getImageUrl(image.path, { preview: true, quality: '50' });
+    img.src = getImageUrl(image.path, { preview: true, quality: '30' });
 
     const input = document.createElement("input");
     input.className = "field";
