@@ -20,10 +20,11 @@ function getImageUrl(path, options = {}) {
     // 使用 render/image 端點可確保轉換被套用
     const renderUrl = `${SUPABASE_URL}/storage/v1/render/image/public/${BUCKET}/${encodeStoragePath(path)}`;
     const urlObj = new URL(renderUrl);
-    // 設置最大寬度，質量為85（在質量和大小間取得平衡）
-    urlObj.searchParams.set('width', options.width || '1200');
+    // 只設置品質參數，不限制寬度，保持原始縱橫比
     urlObj.searchParams.set('quality', options.quality || '85');
     urlObj.searchParams.set('resize', 'contain');
+    // 添加版本號強制刷新快取
+    urlObj.searchParams.set('v', '1');
     if (options.format) {
       urlObj.searchParams.set('format', options.format);
     }
@@ -187,7 +188,7 @@ async function loadAlbums() {
     if (images && images.length > 0) {
       images.slice(0, 5).forEach((img) => {
         const imgEl = document.createElement("img");
-        imgEl.src = getImageUrl(img.path, { preview: true, width: '400' });
+        imgEl.src = getImageUrl(img.path, { preview: true, quality: '75' });
         preview.appendChild(imgEl);
       });
     } else {
@@ -374,7 +375,7 @@ function renderImages() {
     card.dataset.index = index;
 
     const img = document.createElement("img");
-    img.src = getImageUrl(image.path, { preview: true, width: '600' });
+    img.src = getImageUrl(image.path, { preview: true, quality: '85' });
 
     const input = document.createElement("input");
     input.className = "field";
@@ -617,9 +618,9 @@ function updateEmbed() {
     previewContainer.style.height = '420px';
   }
   
-  // 添加时间戳强制刷新预览缓存
+  // 添加版本號強制刷新預覽快取
   const previewUrl = new URL(url);
-  previewUrl.searchParams.set('_t', Date.now());
+  previewUrl.searchParams.set('_cache', '1');
   ui.embedPreview.src = previewUrl.toString();
 }
 

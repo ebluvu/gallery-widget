@@ -19,10 +19,11 @@ function getImageUrl(path, options = {}) {
     // 使用 render/image 端點可確保轉換被套用
     const renderUrl = `${SUPABASE_URL}/storage/v1/render/image/public/${BUCKET}/${encodeStoragePath(path)}`;
     const urlObj = new URL(renderUrl);
-    // 設置最大寬度，質量為85（在質量和大小間取得平衡）
-    urlObj.searchParams.set('width', options.width || '1600');
+    // 只設置品質參數，不限制寬度，保持原始縱橫比
     urlObj.searchParams.set('quality', options.quality || '85');
     urlObj.searchParams.set('resize', 'contain');
+    // 添加版本號強制刷新快取
+    urlObj.searchParams.set('v', '1');
     if (options.format) {
       urlObj.searchParams.set('format', options.format);
     }
@@ -37,8 +38,7 @@ function getImageUrl(path, options = {}) {
 function setPreviewImage(imgEl, path, options = {}) {
   const url = getImageUrl(path, {
     preview: true,
-    width: options.width || '800',
-    quality: '40',
+    quality: options.quality || '40',
   });
   
   imgEl.src = url;
@@ -500,7 +500,7 @@ function renderThumbnail(album, images) {
     const thumb = document.createElement("img");
     thumb.className = i === 0 ? "thumbnail active" : "thumbnail";
     thumb.dataset.index = i;
-    thumb.src = getImageUrl(image.path, { preview: true, width: '300' });
+    thumb.src = getImageUrl(image.path, { preview: true, quality: '70' });
     thumb.alt = image.caption || "";
     thumb.addEventListener("click", () => {
       currentIndex = i;
