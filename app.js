@@ -246,26 +246,29 @@ async function loadAlbums() {
     ui.albumList.appendChild(card);
   }
 
-  const createCard = document.createElement("button");
-  createCard.type = "button";
-  createCard.className = "album-card album-card-create";
-  createCard.addEventListener("click", () => ui.fileInput.click());
+  // 只在有相簿時才顯示建立相簿按鈕
+  if (albums.length > 0) {
+    const createCard = document.createElement("button");
+    createCard.type = "button";
+    createCard.className = "album-card album-card-create";
+    createCard.addEventListener("click", () => ui.fileInput.click());
 
-  const createContent = document.createElement("div");
-  createContent.className = "album-card-create-content";
+    const createContent = document.createElement("div");
+    createContent.className = "album-card-create-content";
 
-  const createPlus = document.createElement("span");
-  createPlus.className = "album-card-create-plus";
-  createPlus.textContent = "+";
+    const createPlus = document.createElement("span");
+    createPlus.className = "album-card-create-plus";
+    createPlus.textContent = "+";
 
-  const createText = document.createElement("span");
-  createText.className = "album-card-create-text";
-  createText.textContent = "建立相簿";
+    const createText = document.createElement("span");
+    createText.className = "album-card-create-text";
+    createText.textContent = "建立相簿";
 
-  createContent.appendChild(createPlus);
-  createContent.appendChild(createText);
-  createCard.appendChild(createContent);
-  ui.albumList.appendChild(createCard);
+    createContent.appendChild(createPlus);
+    createContent.appendChild(createText);
+    createCard.appendChild(createContent);
+    ui.albumList.appendChild(createCard);
+  }
 }
 
 async function createAlbum(title) {

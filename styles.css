@@ -256,6 +256,13 @@ h2, h3 {
   display: none;
 }
 
+.dropzone:hover {
+  border-color: var(--accent);
+  background: rgba(15, 23, 42, 0.35);
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
 .albums {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -272,6 +279,7 @@ h2, h3 {
   position: relative;
   overflow: hidden;
   min-height: 280px;
+  border-radius: 12px;
 }
 
 .album-card-create {
@@ -285,8 +293,6 @@ h2, h3 {
 .album-card-create:hover {
   border-color: var(--accent);
   background: rgba(15, 23, 42, 0.35);
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .album-card-create-content {
@@ -294,26 +300,19 @@ h2, h3 {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  color: var(--muted);
-  font-weight: 600;
 }
 
 .album-card-create-plus {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.35);
   color: var(--ink);
-  font-size: 32px;
+  font-size: 64px;
   line-height: 1;
 }
 
 .album-card-create-text {
+  color: var(--muted);
   font-size: 14px;
   letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
 .album-card:hover {
@@ -503,6 +502,7 @@ h2, h3 {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
+  border-radius: 12px;
 }
 
 .image-card:hover {
