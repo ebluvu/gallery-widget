@@ -1294,3 +1294,142 @@ h2, h3 {
     min-width: 0;
   }
 }
+
+/* ============================= */
+/* Migration Panel Styles */
+/* ============================= */
+
+.migration-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.migration-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.migration-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.migration-status {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.migration-progress {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.migration-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #fb923c);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.migration-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 14px;
+}
+
+.migration-log-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  animation: migrationLogSlideIn 0.3s ease;
+}
+
+@keyframes migrationLogSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.migration-log-item.success {
+  border-left: 3px solid #10b981;
+}
+
+.migration-log-item.error {
+  border-left: 3px solid #ef4444;
+}
+
+.migration-log-item.info {
+  border-left: 3px solid var(--accent);
+}
+
+.migration-log-item.warning {
+  border-left: 3px solid #f59e0b;
+}
+
+.migration-log-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.migration-log-item.success .migration-log-icon {
+  color: #10b981;
+}
+
+.migration-log-item.error .migration-log-icon {
+  color: #ef4444;
+}
+
+.migration-log-item.info .migration-log-icon {
+  color: var(--accent);
+}
+
+.migration-log-item.warning .migration-log-icon {
+  color: #f59e0b;
+}
+
+.migration-log-text {
+  flex: 1;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.migration-log-item.error .migration-log-text {
+  color: #fca5a5;
+}
+
+@media (max-width: 720px) {
+  .migration-actions {
+    flex-direction: column;
+  }
+
+  .migration-actions button {
+    width: 100%;
+  }
+}

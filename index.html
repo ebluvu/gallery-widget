@@ -54,6 +54,31 @@
 
     <section class="card">
       <div class="card-head">
+        <h3>🔄 從 Albumizr 遷移相簿</h3>
+        <p class="muted">輸入 Albumizr 相簿連結，自動提取圖片並建立新相簿。登入用戶可批次轉換多個連結。</p>
+      </div>
+      <div class="migration-container">
+        <div class="migration-input-group">
+          <label class="label">Albumizr 連結</label>
+          <textarea id="albumizrUrls" class="field" rows="3" placeholder="例如：https://albumizr.com/skins/bandana/index.php?key=0Gnc&#10;&#10;登入用戶可輸入多個連結（每行一個）"></textarea>
+        </div>
+        <div class="migration-actions">
+          <button id="startMigrationBtn" class="btn primary">
+            <span>開始遷移</span>
+          </button>
+          <button id="clearMigrationBtn" class="btn ghost">清除</button>
+        </div>
+        <div id="migrationStatus" class="migration-status hidden">
+          <div class="migration-progress">
+            <div class="migration-progress-bar" id="migrationProgressBar"></div>
+          </div>
+          <div id="migrationLog" class="migration-log"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
         <h3>嵌入與分享</h3>
         <p class="muted">生成 iframe 或直接分享連結。</p>
       </div>

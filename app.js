@@ -78,6 +78,13 @@ const ui = {
   closeModalBtn: document.getElementById("closeModalBtn"),
   googleSignInBtn: document.getElementById("googleSignInBtn"),
   toastContainer: document.getElementById("toastContainer"),
+  // Migration UI elements
+  albumizrUrls: document.getElementById("albumizrUrls"),
+  startMigrationBtn: document.getElementById("startMigrationBtn"),
+  clearMigrationBtn: document.getElementById("clearMigrationBtn"),
+  migrationStatus: document.getElementById("migrationStatus"),
+  migrationProgressBar: document.getElementById("migrationProgressBar"),
+  migrationLog: document.getElementById("migrationLog"),
 };
 
 // Toast 通知系統
@@ -955,6 +962,311 @@ supabase.auth.onAuthStateChange((event, session) => {
     updateEmbed();
   }
 });
+
+// ===========================
+// Albumizr 遷移功能
+// ===========================
+
+function addMigrationLog(message, type = 'info') {
+  const logItem = document.createElement('div');
+  logItem.className = `migration-log-item ${type}`;
+  
+  const icons = {
+    success: '✓',
+    error: '✕',
+    info: 'ℹ',
+    warning: '⚠'
+  };
+  
+  logItem.innerHTML = `
+    <div class="migration-log-icon">${icons[type]}</div>
+    <div class="migration-log-text">${message}</div>
+  `;
+  
+  ui.migrationLog.appendChild(logItem);
+  ui.migrationLog.scrollTop = ui.migrationLog.scrollHeight;
+}
+
+function updateMigrationProgress(current, total) {
+  const percentage = Math.round((current / total) * 100);
+  ui.migrationProgressBar.style.width = `${percentage}%`;
+}
+
+// 從 albumizr URL 提取相簿 key
+function extractAlbumizrKey(url) {
+  try {
+    const urlObj = new URL(url);
+    const key = urlObj.searchParams.get('key');
+    return key;
+  } catch (e) {
+    // 嘗試直接匹配 key 參數
+    const match = url.match(/[?&]key=([^&]+)/);
+    return match ? match[1] : null;
+  }
+}
+
+// 從 albumizr 獲取圖片列表（包含 URL 和說明文字）
+async function fetchAlbumizrImages(albumUrl) {
+  const key = extractAlbumizrKey(albumUrl);
+  if (!key) {
+    throw new Error('無法從 URL 中提取相簿 key');
+  }
+
+  addMigrationLog(`正在從 albumizr 提取相簿 [${key}] 的圖片...`, 'info');
+
+  // 使用 CORS 代理來繞過 CORS 限制
+  const corsProxy = 'https://corsproxy.io/?';
+  const targetUrl = `https://albumizr.com/skins/bandana/index.php?key=${key}`;
+  const proxyUrl = corsProxy + encodeURIComponent(targetUrl);
+
+  try {
+    const response = await fetch(proxyUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP 錯誤: ${response.status}`);
+    }
+
+    const html = await response.text();
+    
+    // 解析 HTML 來提取圖片資訊
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // Albumizr 使用 <div class="th" data-url="..." data-caption="..."> 結構
+    const thumbDivs = doc.querySelectorAll('div.th[data-url]');
+    
+    const images = [];
+    thumbDivs.forEach(div => {
+      let imageUrl = div.getAttribute('data-url');
+      const caption = div.getAttribute('data-caption') || '';
+      
+      if (imageUrl) {
+        // 處理相對路徑（以 // 開頭）
+        if (imageUrl.startsWith('//')) {
+          imageUrl = 'https:' + imageUrl;
+        } else if (!imageUrl.startsWith('http')) {
+          imageUrl = 'https://albumizr.com' + imageUrl;
+        }
+        
+        images.push({
+          url: imageUrl,
+          caption: caption
+        });
+      }
+    });
+    
+    if (images.length === 0) {
+      throw new Error('未在相簿中找到任何圖片');
+    }
+
+    addMigrationLog(`✓ 成功提取 ${images.length} 張圖片及說明文字`, 'success');
+    return images;
+  } catch (error) {
+    addMigrationLog(`✗ 提取失敗: ${error.message}`, 'error');
+    throw error;
+  }
+}
+
+// 從 URL 下載圖片並轉換為 Blob
+async function downloadImage(imageUrl) {
+  const corsProxy = 'https://corsproxy.io/?';
+  const proxyUrl = corsProxy + encodeURIComponent(imageUrl);
+
+  try {
+    const response = await fetch(proxyUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP 錯誤: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    
+    // 確保是圖片類型
+    if (!blob.type.startsWith('image/')) {
+      throw new Error('下載的內容不是圖片');
+    }
+
+    return blob;
+  } catch (error) {
+    throw new Error(`下載失敗: ${error.message}`);
+  }
+}
+
+// 遷移單個相簿
+async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
+  try {
+    const key = extractAlbumizrKey(albumUrl);
+    const albumTitle = `Albumizr 遷移 - ${key}`;
+    
+    addMigrationLog(`[${albumIndex}/${totalAlbums}] 開始遷移相簿: ${albumTitle}`, 'info');
+
+    // 1. 提取圖片列表（包含 URL 和說明文字）
+    const images = await fetchAlbumizrImages(albumUrl);
+
+    // 2. 創建新相簿
+    addMigrationLog(`正在創建相簿...`, 'info');
+    const album = await createAlbum(albumTitle);
+    if (!album) {
+      throw new Error('創建相簿失敗');
+    }
+
+    // 臨時選中這個相簿以便上傳
+    const previousAlbum = state.album;
+    state.album = album;
+
+    // 3. 下載並上傳每張圖片
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      const imageIndex = i + 1;
+      
+      try {
+        addMigrationLog(`[${imageIndex}/${images.length}] 下載圖片...`, 'info');
+        const blob = await downloadImage(image.url);
+
+        // 創建 File 對象
+        const fileName = image.url.split('/').pop() || `image-${imageIndex}.jpg`;
+        const file = new File([blob], fileName, { type: blob.type });
+
+        // 上傳圖片
+        const { blob: processedBlob, width, height, extension } = await prepareImage(file);
+        const path = `${album.id}/${newId()}.${extension}`;
+        const contentType = extension === "png" ? "image/png" : "image/jpeg";
+
+        const { error: uploadError } = await supabase.storage
+          .from(BUCKET)
+          .upload(path, processedBlob, { contentType });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // 添加到資料庫，包含圖片說明文字
+        const sortOrder = i + 1;
+        const { error: insertError } = await supabase
+          .from("images")
+          .insert({
+            id: newId(),
+            album_id: album.id,
+            path,
+            caption: image.caption, // 使用從 albumizr 提取的說明文字
+            sort_order: sortOrder,
+            width,
+            height,
+          });
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        successCount++;
+        const captionInfo = image.caption ? ` (說明: ${image.caption})` : '';
+        addMigrationLog(`✓ [${imageIndex}/${images.length}] 圖片上傳成功${captionInfo}`, 'success');
+        
+        // 更新進度
+        updateMigrationProgress(albumIndex - 1 + (imageIndex / images.length), totalAlbums);
+      } catch (error) {
+        failCount++;
+        addMigrationLog(`✗ [${imageIndex}/${images.length}] 圖片上傳失敗: ${error.message}`, 'error');
+      }
+    }
+
+    // 恢復之前選中的相簿
+    state.album = previousAlbum;
+
+    // 4. 完成
+    addMigrationLog(
+      `✓ 相簿遷移完成！成功: ${successCount}, 失敗: ${failCount}`,
+      successCount > 0 ? 'success' : 'warning'
+    );
+
+    // 重新載入相簿列表
+    await loadAlbums();
+    
+    return { success: successCount, failed: failCount };
+  } catch (error) {
+    addMigrationLog(`✗ 相簿遷移失敗: ${error.message}`, 'error');
+    throw error;
+  }
+}
+
+// 開始遷移
+async function startMigration() {
+  const urls = ui.albumizrUrls.value
+    .split('\n')
+    .map(url => url.trim())
+    .filter(url => url.length > 0);
+
+  if (urls.length === 0) {
+    showToast('請輸入至少一個 Albumizr 連結', 'warning');
+    return;
+  }
+
+  // 檢查是否為匿名用戶且輸入了多個連結
+  if (!state.user && urls.length > 1) {
+    showToast('匿名用戶一次只能轉換一個相簿，請登入以批次轉換', 'warning');
+    return;
+  }
+
+  // 禁用按鈕
+  ui.startMigrationBtn.disabled = true;
+  ui.startMigrationBtn.innerHTML = '<span>遷移中...</span>';
+  ui.clearMigrationBtn.disabled = true;
+  ui.albumizrUrls.disabled = true;
+
+  // 顯示狀態區域
+  ui.migrationStatus.classList.remove('hidden');
+  ui.migrationLog.innerHTML = '';
+  ui.migrationProgressBar.style.width = '0%';
+
+  addMigrationLog(`開始遷移 ${urls.length} 個相簿...`, 'info');
+
+  let totalSuccess = 0;
+  let totalFailed = 0;
+
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    try {
+      const result = await migrateAlbumizrAlbum(url, i + 1, urls.length);
+      totalSuccess += result.success;
+      totalFailed += result.failed;
+    } catch (error) {
+      addMigrationLog(`相簿 ${i + 1} 遷移失敗: ${error.message}`, 'error');
+    }
+    
+    updateMigrationProgress(i + 1, urls.length);
+  }
+
+  // 完成
+  addMigrationLog(
+    `\n🎉 所有遷移完成！\n總計成功: ${totalSuccess} 張圖片\n總計失敗: ${totalFailed} 張圖片`,
+    totalFailed === 0 ? 'success' : 'warning'
+  );
+
+  showToast('遷移完成！', 'success');
+
+  // 重新啟用按鈕
+  ui.startMigrationBtn.disabled = false;
+  ui.startMigrationBtn.innerHTML = '<span>開始遷移</span>';
+  ui.clearMigrationBtn.disabled = false;
+  ui.albumizrUrls.disabled = false;
+}
+
+// 清除遷移表單
+function clearMigration() {
+  ui.albumizrUrls.value = '';
+  ui.migrationStatus.classList.add('hidden');
+  ui.migrationLog.innerHTML = '';
+  ui.migrationProgressBar.style.width = '0%';
+}
+
+// 綁定事件監聽器
+ui.startMigrationBtn.addEventListener('click', startMigration);
+ui.clearMigrationBtn.addEventListener('click', clearMigration);
+
+// ===========================
+// 初始化
+// ===========================
 
 (async function init() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
