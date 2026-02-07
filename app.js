@@ -66,7 +66,6 @@ const ui = {
   albumList: document.getElementById("albumList"),
   dropzone: document.getElementById("dropzone"),
   fileInput: document.getElementById("fileInput"),
-  uploadLog: document.getElementById("uploadLog"),
   embedCode: document.getElementById("embedCode"),
   shareLink: document.getElementById("shareLink"),
   embedPreview: document.getElementById("embedPreview"),
@@ -74,17 +73,64 @@ const ui = {
   bgColor: document.getElementById("bgColor"),
   addNewSelect: document.getElementById("addNewSelect"),
   imageList: document.getElementById("imageList"),
-  status: document.getElementById("status"),
+  loginModal: document.getElementById("loginModal"),
+  openLoginModalBtn: document.getElementById("openLoginModalBtn"),
+  closeModalBtn: document.getElementById("closeModalBtn"),
+  googleSignInBtn: document.getElementById("googleSignInBtn"),
+  toastContainer: document.getElementById("toastContainer"),
 };
 
-function setStatus(message) {
-  ui.status.textContent = message || "";
+// Toast 通知系統
+function showToast(message, type = 'info', duration = 4000) {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  // 圖標映射
+  const icons = {
+    success: '✓',
+    error: '✕',
+    info: 'ℹ',
+    warning: '⚠'
+  };
+  
+  toast.innerHTML = `
+    <div class="toast-icon">${icons[type] || icons.info}</div>
+    <div class="toast-content">
+      <div class="toast-message">${message}</div>
+    </div>
+    <button class="toast-close">✕</button>
+  `;
+  
+  const closeBtn = toast.querySelector('.toast-close');
+  
+  function removeToast() {
+    toast.classList.add('removing');
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.remove();
+      }
+    }, 300);
+  }
+  
+  closeBtn.addEventListener('click', removeToast);
+  
+  ui.toastContainer.appendChild(toast);
+  
+  // 自動移除
+  if (duration > 0) {
+    setTimeout(removeToast, duration);
+  }
+  
+  return toast;
+}
+
+function setStatus(message, type = 'info') {
+  if (!message) return;
+  showToast(message, type);
 }
 
 function logUpload(message) {
-  const p = document.createElement("p");
-  p.textContent = message;
-  ui.uploadLog.prepend(p);
+  showToast(message, 'success', 3000);
 }
 
 function newId() {
@@ -153,7 +199,7 @@ async function loadAlbums() {
   }
 
   if (error) {
-    setStatus(error.message);
+    setStatus(error.message, 'error');
     return;
   }
 
@@ -207,7 +253,7 @@ async function loadAlbums() {
         .update({ title: newTitle })
         .eq("id", album.id);
       if (error) {
-        setStatus(error.message);
+        setStatus(error.message, 'error');
       } else if (state.album && state.album.id === album.id) {
         state.album.title = newTitle;
         updateEmbed();
@@ -313,7 +359,7 @@ async function createAlbum(title) {
     .single();
 
   if (error) {
-    setStatus(error.message);
+    setStatus(error.message, 'error');
     return null;
   }
 
@@ -334,7 +380,7 @@ async function loadAlbum(albumId) {
     .single();
 
   if (error) {
-    setStatus(error.message);
+    setStatus(error.message, 'error');
     return;
   }
 
@@ -371,7 +417,7 @@ async function loadImages() {
     .order("sort_order", { ascending: true });
 
   if (error) {
-    setStatus(error.message);
+    setStatus(error.message, 'error');
     return;
   }
 
@@ -520,7 +566,7 @@ async function updateCaption(imageId, caption) {
     .eq("id", imageId);
 
   if (error) {
-    setStatus(error.message);
+    setStatus(error.message, 'error');
     return;
   }
   
@@ -541,7 +587,7 @@ async function deleteImage(image) {
     .eq("id", image.id);
 
   if (deleteRowError) {
-    setStatus(deleteRowError.message);
+    setStatus(deleteRowError.message, 'error');
     return;
   }
 
@@ -578,7 +624,7 @@ async function deleteAnonymousAlbumRecord(albumId) {
 async function deleteAlbum(albumId) {
   // 只有認證用戶才能刪除相簿及其存儲文件
   if (!state.user) {
-    setStatus("只有登入用戶才能刪除相簿。");
+    setStatus("只有登入用戶才能刪除相簿。", 'warning');
     return;
   }
 
@@ -595,7 +641,7 @@ async function deleteAlbum(albumId) {
     .eq("album_id", albumId);
 
   if (deleteImagesError) {
-    setStatus(deleteImagesError.message);
+    setStatus(deleteImagesError.message, 'error');
     return;
   }
 
@@ -620,7 +666,7 @@ async function deleteAlbum(albumId) {
     .eq("id", albumId);
 
   if (deleteAlbumError) {
-    setStatus(deleteAlbumError.message);
+    setStatus(deleteAlbumError.message, 'error');
     return;
   }
 
@@ -632,7 +678,7 @@ async function deleteAlbum(albumId) {
     updateEmbed();
   }
 
-  setStatus("相簿已刪除。");
+  setStatus("相簿已刪除。", 'success');
   await loadAlbums();
 }
 
@@ -653,7 +699,7 @@ async function updateSettings() {
     .eq("id", state.album.id);
 
   if (error) {
-    setStatus(error.message);
+    setStatus(error.message, 'error');
     return;
   }
 
@@ -718,7 +764,7 @@ async function prepareImage(file) {
 async function uploadImages(files) {
   // 如果没有选中相册，自动创建一个
   if (!state.album) {
-    setStatus("自動建立新相簿...");
+    setStatus("自動建立新相簿...", 'info');
     const album = await createAlbum();
     if (!album) {
       return;
@@ -734,11 +780,11 @@ async function uploadImages(files) {
   for (let i = 0; i < files.length; i += 1) {
     const file = files[i];
     if (!file.type.startsWith("image/")) {
-      logUpload(`略過 ${file.name}`);
+      showToast(`略過 ${file.name}`, 'warning', 2000);
       continue;
     }
 
-    setStatus(`處理中 ${file.name}...`);
+    setStatus(`處理中 ${file.name}...`, 'info');
     const { blob, width, height, extension } = await prepareImage(file);
     const path = `${state.album.id}/${newId()}.${extension}`;
     const contentType = extension === "png" ? "image/png" : "image/jpeg";
@@ -748,7 +794,7 @@ async function uploadImages(files) {
       .upload(path, blob, { contentType });
 
     if (uploadError) {
-      setStatus(uploadError.message);
+      setStatus(uploadError.message, 'error');
       return;
     }
 
@@ -766,7 +812,7 @@ async function uploadImages(files) {
       });
 
     if (insertError) {
-      setStatus(insertError.message);
+      setStatus(insertError.message, 'error');
       return;
     }
 
@@ -779,13 +825,13 @@ async function uploadImages(files) {
     await loadAlbums();
   }
   updateEmbed();
-  setStatus("上傳完成。");
+  setStatus("上傳完成。", 'success');
 }
 
 ui.signInBtn.addEventListener("click", async () => {
   const email = ui.emailInput.value.trim();
   if (!email) {
-    setStatus("請輸入您的電子郵件");
+    setStatus("請輸入您的電子郵件", 'warning');
     return;
   }
   
@@ -797,10 +843,43 @@ ui.signInBtn.addEventListener("click", async () => {
   });
   
   if (error) {
-    setStatus(error.message);
+    setStatus(error.message, 'error');
   } else {
-    setStatus("請查收電子郵件中的登入連結！");
+    setStatus("請查收電子郵件中的登入連結！", 'success');
     ui.emailInput.value = "";
+    // 關閉 modal
+    ui.loginModal.classList.add("hidden");
+  }
+});
+
+// 開啟登入 modal
+ui.openLoginModalBtn.addEventListener("click", () => {
+  ui.loginModal.classList.remove("hidden");
+  // 自動聚焦到電子郵件輸入欄位
+  setTimeout(() => ui.emailInput.focus(), 100);
+});
+
+// 關閉登入 modal
+ui.closeModalBtn.addEventListener("click", () => {
+  ui.loginModal.classList.add("hidden");
+});
+
+// 點擊 overlay 關閉 modal
+ui.loginModal.querySelector(".modal-overlay").addEventListener("click", () => {
+  ui.loginModal.classList.add("hidden");
+});
+
+// Google 登入
+ui.googleSignInBtn.addEventListener("click", async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.href.split('#')[0].split('?')[0],
+    },
+  });
+  
+  if (error) {
+    setStatus(error.message, 'error');
   }
 });
 
@@ -857,6 +936,13 @@ ui.addNewSelect.addEventListener("change", updateSettings);
 ui.embedCode.addEventListener("click", () => ui.embedCode.select());
 ui.shareLink.addEventListener("click", () => ui.shareLink.select());
 
+// ESC 鍵關閉 modal
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !ui.loginModal.classList.contains("hidden")) {
+    ui.loginModal.classList.add("hidden");
+  }
+});
+
 supabase.auth.onAuthStateChange((event, session) => {
   const newUserId = session?.user?.id || null;
   const oldUserId = state.user?.id || null;
@@ -872,7 +958,7 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 (async function init() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    setStatus("缺少 Supabase 設定。");
+    setStatus("缺少 Supabase 設定。", 'error');
     return;
   }
   
