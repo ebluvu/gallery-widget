@@ -1005,6 +1005,13 @@ function extractAlbumizrKey(url) {
   }
 }
 
+// CORS 代理列表（按優先順序）
+const CORS_PROXIES = [
+  { name: 'AllOrigins', url: (targetUrl) => `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` },
+  { name: 'ThingProxy', url: (targetUrl) => `https://thingproxy.freeboard.io/fetch/${targetUrl}` },
+  { name: 'CorsProxy', url: (targetUrl) => `https://corsproxy.io/?${encodeURIComponent(targetUrl)}` },
+];
+
 // 從 albumizr 獲取圖片列表（包含 URL 和說明文字）
 async function fetchAlbumizrImages(albumUrl) {
   const key = extractAlbumizrKey(albumUrl);
@@ -1014,80 +1021,104 @@ async function fetchAlbumizrImages(albumUrl) {
 
   addMigrationLog(`正在從 albumizr 提取相簿 [${key}] 的圖片...`, 'info');
 
-  // 使用 CORS 代理來繞過 CORS 限制
-  const corsProxy = 'https://corsproxy.io/?';
   const targetUrl = `https://albumizr.com/skins/bandana/index.php?key=${key}`;
-  const proxyUrl = corsProxy + encodeURIComponent(targetUrl);
-
-  try {
-    const response = await fetch(proxyUrl);
-    if (!response.ok) {
-      throw new Error(`HTTP 錯誤: ${response.status}`);
-    }
-
-    const html = await response.text();
-    
-    // 解析 HTML 來提取圖片資訊
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    
-    // Albumizr 使用 <div class="th" data-url="..." data-caption="..."> 結構
-    const thumbDivs = doc.querySelectorAll('div.th[data-url]');
-    
-    const images = [];
-    thumbDivs.forEach(div => {
-      let imageUrl = div.getAttribute('data-url');
-      const caption = div.getAttribute('data-caption') || '';
+  
+  // 嘗試多個 CORS 代理
+  let lastError = null;
+  for (const proxy of CORS_PROXIES) {
+    try {
+      addMigrationLog(`嘗試使用 ${proxy.name} 代理...`, 'info');
+      const proxyUrl = proxy.url(targetUrl);
       
-      if (imageUrl) {
-        // 處理相對路徑（以 // 開頭）
-        if (imageUrl.startsWith('//')) {
-          imageUrl = 'https:' + imageUrl;
-        } else if (!imageUrl.startsWith('http')) {
-          imageUrl = 'https://albumizr.com' + imageUrl;
-        }
-        
-        images.push({
-          url: imageUrl,
-          caption: caption
-        });
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP 錯誤: ${response.status}`);
       }
-    });
-    
-    if (images.length === 0) {
-      throw new Error('未在相簿中找到任何圖片');
-    }
 
-    addMigrationLog(`✓ 成功提取 ${images.length} 張圖片及說明文字`, 'success');
-    return images;
-  } catch (error) {
-    addMigrationLog(`✗ 提取失敗: ${error.message}`, 'error');
-    throw error;
+      const html = await response.text();
+    
+      // 解析 HTML 來提取圖片資訊
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      // Albumizr 使用 <div class="th" data-url="..." data-caption="..."> 結構
+      const thumbDivs = doc.querySelectorAll('div.th[data-url]');
+      
+      const images = [];
+      thumbDivs.forEach(div => {
+        let imageUrl = div.getAttribute('data-url');
+        const caption = div.getAttribute('data-caption') || '';
+        
+        if (imageUrl) {
+          // 處理相對路徑（以 // 開頭）
+          if (imageUrl.startsWith('//')) {
+            imageUrl = 'https:' + imageUrl;
+          } else if (!imageUrl.startsWith('http')) {
+            imageUrl = 'https://albumizr.com' + imageUrl;
+          }
+          
+          images.push({
+            url: imageUrl,
+            caption: caption
+          });
+        }
+      });
+      
+      if (images.length === 0) {
+        throw new Error('未在相簿中找到任何圖片');
+      }
+
+      addMigrationLog(`✓ 成功提取 ${images.length} 張圖片及說明文字 (使用 ${proxy.name})`, 'success');
+      return images;
+      
+    } catch (error) {
+      lastError = error;
+      addMigrationLog(`${proxy.name} 失敗: ${error.message}`, 'warning');
+      // 繼續嘗試下一個代理
+    }
   }
+  
+  // 所有代理都失敗了
+  addMigrationLog(`✗ 所有代理都失敗了`, 'error');
+  throw lastError || new Error('無法提取圖片');
 }
 
 // 從 URL 下載圖片並轉換為 Blob
 async function downloadImage(imageUrl) {
-  const corsProxy = 'https://corsproxy.io/?';
-  const proxyUrl = corsProxy + encodeURIComponent(imageUrl);
+  // 嘗試多個 CORS 代理
+  let lastError = null;
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const proxyUrl = proxy.url(imageUrl);
+      
+      const response = await fetch(proxyUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP 錯誤: ${response.status}`);
+      }
 
-  try {
-    const response = await fetch(proxyUrl);
-    if (!response.ok) {
-      throw new Error(`HTTP 錯誤: ${response.status}`);
+      const blob = await response.blob();
+      
+      // 確保是圖片類型
+      if (!blob.type.startsWith('image/')) {
+        throw new Error('下載的內容不是圖片');
+      }
+
+      return blob;
+      
+    } catch (error) {
+      lastError = error;
+      // 靜默失敗，嘗試下一個代理
+      continue;
     }
-
-    const blob = await response.blob();
-    
-    // 確保是圖片類型
-    if (!blob.type.startsWith('image/')) {
-      throw new Error('下載的內容不是圖片');
-    }
-
-    return blob;
-  } catch (error) {
-    throw new Error(`下載失敗: ${error.message}`);
   }
+  
+  // 所有代理都失敗了
+  throw new Error(`下載失敗: ${lastError?.message || '所有代理都失敗'}`);
 }
 
 // 遷移單個相簿
