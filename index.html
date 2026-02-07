@@ -33,16 +33,43 @@
   </header>
 
   <main class="shell">
-    <section class="card">
-      <div class="card-head">
-        <h3>上傳圖片</h3>
-        <p class="muted">支援多張圖片。若未選擇相簿會自動建立新相簿，否則加入已選相簿。</p>
-      </div>
-      <label id="dropzone" class="dropzone">
-        <input id="fileInput" type="file" accept="image/*" multiple />
-        <span>拖曳圖片到此處或點擊上傳</span>
-      </label>
-    </section>
+    <div class="grid">
+      <section class="card">
+        <div class="card-head">
+          <h3>上傳圖片</h3>
+          <p class="muted">支援多張圖片。若未選擇相簿會自動建立新相簿，否則加入已選相簿。</p>
+        </div>
+        <label id="dropzone" class="dropzone">
+          <input id="fileInput" type="file" accept="image/*" multiple />
+          <span>拖曳圖片到此處或點擊上傳</span>
+        </label>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h3>🔄 從 Albumizr 遷移相簿</h3>
+          <p class="muted">輸入 Albumizr 相簿連結，自動提取圖片並建立新相簿。登入用戶可批次轉換多個連結。</p>
+        </div>
+        <div class="migration-container">
+          <div class="migration-input-group">
+            <label class="label">Albumizr 連結</label>
+            <textarea id="albumizrUrls" class="field" rows="3" placeholder="登入用戶可輸入多個連結（每行一個）"></textarea>
+          </div>
+          <div class="migration-actions">
+            <button id="startMigrationBtn" class="btn primary">
+              <span>開始遷移</span>
+            </button>
+            <button id="clearMigrationBtn" class="btn ghost">清除</button>
+          </div>
+          <div id="migrationStatus" class="migration-status hidden">
+            <div class="migration-progress">
+              <div class="migration-progress-bar" id="migrationProgressBar"></div>
+            </div>
+            <div id="migrationLog" class="migration-log"></div>
+          </div>
+        </div>
+      </section>
+    </div>
 
     <section id="albumSection" class="card">
       <div class="card-head">
@@ -50,31 +77,6 @@
         <p class="muted">點擊相簿選擇，即可編輯名稱、上傳圖片。登入後會顯示可編輯的相簿。</p>
       </div>
       <div id="albumList" class="albums"></div>
-    </section>
-
-    <section class="card">
-      <div class="card-head">
-        <h3>🔄 從 Albumizr 遷移相簿</h3>
-        <p class="muted">輸入 Albumizr 相簿連結，自動提取圖片並建立新相簿。登入用戶可批次轉換多個連結。</p>
-      </div>
-      <div class="migration-container">
-        <div class="migration-input-group">
-          <label class="label">Albumizr 連結</label>
-          <textarea id="albumizrUrls" class="field" rows="3" placeholder="登入用戶可輸入多個連結（每行一個）"></textarea>
-        </div>
-        <div class="migration-actions">
-          <button id="startMigrationBtn" class="btn primary">
-            <span>開始遷移</span>
-          </button>
-          <button id="clearMigrationBtn" class="btn ghost">清除</button>
-        </div>
-        <div id="migrationStatus" class="migration-status hidden">
-          <div class="migration-progress">
-            <div class="migration-progress-bar" id="migrationProgressBar"></div>
-          </div>
-          <div id="migrationLog" class="migration-log"></div>
-        </div>
-      </div>
     </section>
 
     <section class="card">
