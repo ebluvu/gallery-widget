@@ -574,6 +574,14 @@ h2, h3 {
   overflow-x: hidden;
 }
 
+/* Notion 主題背景層（底層，根據 Notion 主題顯示深色或淺色） */
+.notion-theme-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: #ffffff; /* 預設淺色，會被 JavaScript 動態更新 */
+}
+
 .embed-shell {
   width: 100%;
   height: 100vh;

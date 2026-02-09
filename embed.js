@@ -222,10 +222,16 @@ async function loadAlbum(albumId) {
     return;
   }
 
-
-  const bgColor = album.background_color || "#0c1117";
-  document.body.style.background = bgColor;
-  document.documentElement.style.background = bgColor;
+  // 雙層背景系統：底層是 Notion 主題色，上層是用戶自訂色
+  const userBgColor = album.background_color || "#0c1117";
+  
+  // 設定上層背景（用戶自訂色，可能是半透明的）
+  document.body.style.background = userBgColor;
+  document.documentElement.style.background = userBgColor;
+  
+  // 設定底層 Notion 主題背景（會被主題檢測器更新）
+  updateNotionThemeBackground();
+  
   ui.grid.className = `embed-grid ${album.theme || "slideshow"}`;
 
   const { data: images, error: imageError } = await supabase
@@ -639,6 +645,33 @@ function renderThumbnail(album, images) {
   ui.grid.appendChild(mainContainer);
   ui.grid.appendChild(thumbContainer);
 }
+
+// Notion 主題檢測與背景設定
+function updateNotionThemeBackground() {
+  try {
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const notionBg = isDark ? '#191919' : '#ffffff';
+    
+    const themeLayer = document.querySelector('.notion-theme-bg');
+    if (themeLayer) {
+      themeLayer.style.background = notionBg;
+    }
+  } catch (e) {
+    // 如果檢測失敗，使用淺色作為預設
+    const themeLayer = document.querySelector('.notion-theme-bg');
+    if (themeLayer) {
+      themeLayer.style.background = '#ffffff';
+    }
+  }
+}
+
+// 監聽主題變化
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addListener(updateNotionThemeBackground);
+}
+
+// 初始化主題背景
+updateNotionThemeBackground();
 
 const albumId = getAlbumId();
 if (!albumId) {
