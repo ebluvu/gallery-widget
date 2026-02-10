@@ -702,39 +702,39 @@ const NOTION_BLOCK_COLORS = {
   },
   gray: {
     dark: '#383836',
-    light: '#d4d3cf'
+    light: '#f0efed'
   },
-  red: {
-    dark: '#502c29',
-    light: '#f0c5be'
+  tea: {
+    dark: '#45362d',
+    light: '#f5ede9'
   },
   orange: {
     dark: '#53361f',
-    light: '#eaccb2'
+    light: '#fbebde'
   },
   yellow: {
     dark: '#504425',
-    light: '#e8d497'
+    light: '#f9f3dc'
   },
   green: {
     dark: '#263d30',
-    light: '#bed9c9'
-  },
-  teal: {
-    dark: '#143d45',
-    light: '#b0dbe4'
+    light: '#e8f1ec'
   },
   blue: {
-    dark: '#1e3a5f',
-    light: '#a8d8f0'
+    dark: '#233850',
+    light: '#e5f2fc'
   },
   purple: {
     dark: '#3c2d47',
-    light: '#dbc8e8'
+    light: '#f3ebf9'
   },
   pink: {
     dark: '#4e2b3c',
-    light: '#eac4d5'
+    light: '#fae9f1'
+  },
+  red: {
+    dark: '#502c29',
+    light: '#fce9e7'
   }
 };
 
