@@ -753,10 +753,10 @@ function detectActualBackgroundColor(notionBlockColor = 'default') {
 
     if (notionBlockColor === 'default' && isDark) {
       // 檢查是否在 Notion 預覽模式
-      // 預覽模式下 body 會有 notion-body class
-      const bodyClass = document.body.className;
-      const isNotionPreviewMode = bodyClass.includes('notion-body');
-      console.log('[背景檢測] body.className:', bodyClass);
+      // 預覽模式下 Notion 會設置 --c-bacPri CSS 變數
+      const cBacPri = getComputedStyle(document.documentElement).getPropertyValue('--c-bacPri').trim();
+      console.log('[背景檢測] --c-bacPri:', cBacPri);
+      const isNotionPreviewMode = cBacPri !== '';
       console.log('[背景檢測] isNotionPreviewMode:', isNotionPreviewMode);
       if (isNotionPreviewMode) {
         console.log('[背景檢測] ✓ 使用預覽模式深色 #202020');
