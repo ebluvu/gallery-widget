@@ -747,14 +747,18 @@ function detectActualBackgroundColor(notionBlockColor = 'default') {
     const colorObj = NOTION_BLOCK_COLORS[notionBlockColor] || NOTION_BLOCK_COLORS.default;
     const resolvedColor = isDark ? colorObj.dark : colorObj.light;
 
+    console.log('[背景檢測] notionBlockColor:', notionBlockColor);
+    console.log('[背景檢測] isDark:', isDark);
+    console.log('[背景檢測] resolvedColor:', resolvedColor);
+
     if (notionBlockColor === 'default' && isDark) {
-      const referrer = document.referrer.toLowerCase();
-      console.log('[DEBUG] document.referrer:', document.referrer);
-      console.log('[DEBUG] referrer lowercase:', referrer);
-      console.log('[DEBUG] includes pm=c:', referrer.includes('pm=c'));
-      console.log('[DEBUG] includes pm=s:', referrer.includes('pm=s'));
-      if (referrer.includes('pm=c') || referrer.includes('pm=s')) {
-        console.log('[DEBUG] Using preview mode color #202020');
+      // 檢查是否在 Notion 預覽模式（置中或側邊預覽）
+      const htmlStyle = document.documentElement.getAttribute('style');
+      console.log('[背景檢測] htmlStyle:', htmlStyle);
+      const isNotionPreviewMode = htmlStyle?.includes('--full-viewport-height');
+      console.log('[背景檢測] isNotionPreviewMode:', isNotionPreviewMode);
+      if (isNotionPreviewMode) {
+        console.log('[背景檢測] ✓ 使用預覽模式深色 #202020');
         return '#202020';
       }
     }
