@@ -745,26 +745,7 @@ function detectActualBackgroundColor(notionBlockColor = 'default') {
   try {
     const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     const colorObj = NOTION_BLOCK_COLORS[notionBlockColor] || NOTION_BLOCK_COLORS.default;
-    const resolvedColor = isDark ? colorObj.dark : colorObj.light;
-
-    console.log('[背景檢測] notionBlockColor:', notionBlockColor);
-    console.log('[背景檢測] isDark:', isDark);
-    console.log('[背景檢測] resolvedColor:', resolvedColor);
-
-    if (notionBlockColor === 'default' && isDark) {
-      // 檢查是否在 Notion 預覽模式
-      // 預覽模式下 Notion 會設置 --c-bacPri CSS 變數
-      const cBacPri = getComputedStyle(document.documentElement).getPropertyValue('--c-bacPri').trim();
-      console.log('[背景檢測] --c-bacPri:', cBacPri);
-      const isNotionPreviewMode = cBacPri !== '';
-      console.log('[背景檢測] isNotionPreviewMode:', isNotionPreviewMode);
-      if (isNotionPreviewMode) {
-        console.log('[背景檢測] ✓ 使用預覽模式深色 #202020');
-        return '#202020';
-      }
-    }
-
-    return resolvedColor;
+    return isDark ? colorObj.dark : colorObj.light;
   } catch (e) {
     return '#ffffff';
   }
@@ -779,11 +760,8 @@ function updateNotionThemeBackground(notionBlockColor = 'default') {
   
   // 只有來自 Notion 時才套用主題檢測
   if (isFromNotion()) {
-    // 延遲執行，確保 Notion 預覽模式已完全初始化
-    requestAnimationFrame(() => {
-      const actualBgColor = detectActualBackgroundColor(notionBlockColor);
-      themeLayer.style.background = actualBgColor;
-    });
+    const actualBgColor = detectActualBackgroundColor(notionBlockColor);
+    themeLayer.style.background = actualBgColor;
   } else {
     // 非 Notion 環境時，底層設為透明，只顯示用戶自訂背景色
     themeLayer.style.background = 'transparent';
