@@ -778,8 +778,11 @@ function updateNotionThemeBackground(notionBlockColor = 'default') {
   
   // 只有來自 Notion 時才套用主題檢測
   if (isFromNotion()) {
-    const actualBgColor = detectActualBackgroundColor(notionBlockColor);
-    themeLayer.style.background = actualBgColor;
+    // 延遲執行，確保 Notion 預覽模式已完全初始化
+    requestAnimationFrame(() => {
+      const actualBgColor = detectActualBackgroundColor(notionBlockColor);
+      themeLayer.style.background = actualBgColor;
+    });
   } else {
     // 非 Notion 環境時，底層設為透明，只顯示用戶自訂背景色
     themeLayer.style.background = 'transparent';
