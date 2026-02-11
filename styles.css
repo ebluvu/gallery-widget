@@ -1029,13 +1029,17 @@ h2, h3 {
   flex-shrink: 0;
   border-radius: 0;
   border: 2px solid transparent;
-  transition: opacity 0.4s ease, border-color 0.4s ease;
+  transition: opacity 0.25s ease, border-color 0.25s ease;
 }
 
 .thumbnail-bar .thumbnail.active {
   opacity: 1;
   border-color: white;
-  animation: thumbnailFadeIn 0.4s ease-out;
+  animation: thumbnailFadeIn 0.25s ease-out;
+}
+
+.thumbnail-bar .thumbnail.fading-out {
+  animation: thumbnailFadeOut 0.25s ease-out forwards;
 }
 
 @keyframes rise {
@@ -1053,9 +1057,22 @@ h2, h3 {
 @keyframes thumbnailFadeIn {
   from {
     opacity: 0.5;
+    border-color: transparent;
   }
   to {
     opacity: 1;
+    border-color: white;
+  }
+}
+
+@keyframes thumbnailFadeOut {
+  from {
+    opacity: 1;
+    border-color: white;
+  }
+  to {
+    opacity: 0.5;
+    border-color: transparent;
   }
 }
 

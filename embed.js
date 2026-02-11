@@ -191,10 +191,18 @@ function createCarouselController(imagesScroll, images, ui) {
     ui.caption.textContent = images[newIndex].caption || "";
     setImageLink(ui.linkButton, images[newIndex].custom_link);
 
-    // 更新指示器（dots 或 thumbnails）
+    // 更新指示器（dots 或 thumbnails），處理淡入淡出
     if (ui.indicators && Array.isArray(ui.indicators)) {
       ui.indicators.forEach((indicator, i) => {
-        indicator.classList.toggle("active", i === newIndex);
+        if (i === newIndex) {
+          // 新選中的移除 fading-out class，添加 active
+          indicator.classList.remove("fading-out");
+          indicator.classList.add("active");
+        } else if (i === currentIndex) {
+          // 前一個移除 active，添加 fading-out
+          indicator.classList.add("fading-out");
+          indicator.classList.remove("active");
+        }
       });
     }
 
@@ -207,7 +215,7 @@ function createCarouselController(imagesScroll, images, ui) {
     setTimeout(() => {
       currentIndex = newIndex;
       isAnimating = false;
-    }, 500);
+    }, 250);
   };
 
   return { goToSlide, get currentIndex() { return currentIndex; } };
