@@ -131,31 +131,67 @@ export default {
               );
             }
             
-            // 讀取圖片數據
-            const buffer = await object.arrayBuffer();
+            // 構造一個可以被 cf.image 處理的 URL
+            // 使用 R2 public domain URL
+            const publicUrl = `https://pub-ff61965a0e3743ddaf36732782e03991.r2.dev/${objectKey}`;
+            const imageRequestWithCF = new Request(publicUrl, {
+              cf: {
+                image: {
+                  fit: 'scale-down',
+                  quality: parseInt(quality),
+                  format: format,
+                }
+              }
+            });
             
-            // 構建響應頭以支持圖片轉換
+            const imageResponse = await fetch(imageRequestWithCF);
+            
+            // 構建新的響應頭
+            const newFilename = objectKey.split('/').pop().replace(/\.[^.]+$/, `.${format}`);
             const responseHeaders = {
               ...corsHeaders,
-              'Content-Type': format === 'webp' ? 'image/webp' : (format === 'avif' ? 'image/avif' : 'image/jpeg'),
+              'Content-Type': imageResponse.headers.get('Content-Type') || `image/${format}`,
               'Cache-Control': 'public, max-age=31536000',
-              'Content-Disposition': `inline; filename="${objectKey.split('/').pop()}"`,
+              'Content-Disposition': `inline; filename="${newFilename}"`,
             };
             
-            // 添加 Cloudflare 圖片優化提示
-            // 注：實際的格式轉換需要在邊緣進行，此處返回原始圖片
-            // 瀏覽器和 Cloudflare CDN 會根據接受頭自動進行優化
-            responseHeaders['Accept-CH'] = 'DPR, Viewport-Width, Width';
-            
-            return new Response(buffer, {
+            return new Response(imageResponse.body, {
               status: 200,
               headers: responseHeaders
             });
           } catch (error) {
-            return new Response(
-              JSON.stringify({ error: '讀取圖片失敗：' + error.message }),
-              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            console.error('Image transformation error:', error);
+            // 如果轉換失敗，返回原始圖片
+            try {
+              const object = await env.ALBUM_BUCKET.get(objectKey);
+              if (!object) {
+                return new Response(
+                  JSON.stringify({ error: '圖片不存在' }),
+                  { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+              }
+              
+              const buffer = await object.arrayBuffer();
+              const ext = objectKey.split('.').pop()?.toLowerCase();
+              let contentType = 'image/jpeg';
+              if (ext === 'png') contentType = 'image/png';
+              else if (ext === 'webp') contentType = 'image/webp';
+              
+              return new Response(buffer, {
+                status: 200,
+                headers: {
+                  ...corsHeaders,
+                  'Content-Type': contentType,
+                  'Cache-Control': 'public, max-age=31536000',
+                  'Content-Disposition': `inline; filename="${objectKey.split('/').pop()}"`,
+                }
+              });
+            } catch (fallbackError) {
+              return new Response(
+                JSON.stringify({ error: '讀取圖片失敗：' + fallbackError.message }),
+                { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
           }
         }
         

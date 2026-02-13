@@ -13,6 +13,9 @@ export const R2_CONFIG = {
   
   // R2 存取憑證（使用 Cloudflare Workers 處理上傳）
   workerUrl: 'https://gallery-upload-worker.emily070124.workers.dev',
+  
+  // ImageKit CDN for WebP optimization
+  imagekitUrl: 'https://ik.imagekit.io/ebluvu'
 };
 
 // 檢查 R2 配置是否完整

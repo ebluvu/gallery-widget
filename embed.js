@@ -29,14 +29,13 @@ function getImageUrl(pathOrUrl, options = {}) {
   // 如果是 R2 的完整 URL，可選擇性地轉換為 WebP 格式（只在顯示層面）
   if (isR2Url(pathOrUrl)) {
     if (options.preview) {
-      // 使用 Worker 的轉換端點來處理 R2 圖片的 WebP 轉換
-      const transformUrl = new URL(`${R2_CONFIG.workerUrl}/transform`);
-      // 從 R2 URL 提取對象鍵
-      const objectKey = pathOrUrl.replace(R2_CONFIG.publicDomain, '').replace(/^\//, '');
-      transformUrl.searchParams.set('key', objectKey);
-      transformUrl.searchParams.set('quality', options.quality || '50');
-      transformUrl.searchParams.set('format', 'webp'); // 總是要求 WebP 用於預覽
-      return transformUrl.toString();
+      // 使用 ImageKit CDN 進行 WebP 轉換和優化
+      const quality = options.quality || '50';
+      // 從 R2 URL 提取相對路徑（移除 domain）
+      const relativePath = pathOrUrl.replace(R2_CONFIG.publicDomain, '').replace(/^\//, '');
+      // ImageKit URL 格式：https://ik.imagekit.io/ebluvu/[相對路徑]?tr=q-[quality],f-webp
+      const imagekitUrl = `${R2_CONFIG.imagekitUrl}/${relativePath}?tr=q-${quality},f-webp`;
+      return imagekitUrl;
     }
     // 原始閱讀時返回完整 URL（保留原始格式）
     return pathOrUrl;
