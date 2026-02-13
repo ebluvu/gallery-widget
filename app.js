@@ -1595,6 +1595,7 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
         const path = `${album.id}/${newId()}.${extension}`;
         const contentType = extension === "png" ? "image/png" : "image/jpeg";
 
+        let imagePath = path; // 用來儲存最終要保存到數據庫的路徑
         let uploadError = null;
         
         // 優先使用 R2，否則使用 Supabase Storage
@@ -1602,6 +1603,8 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
           const result = await uploadToR2(processedBlob, path, contentType);
           if (!result.success) {
             uploadError = new Error(result.error);
+          } else {
+            imagePath = result.url; // 使用 R2 返回的完整 URL
           }
         } else {
           const response = await supabase.storage
@@ -1618,7 +1621,7 @@ async function migrateAlbumizrAlbum(albumUrl, albumIndex, totalAlbums) {
           .insert({
             id: newId(),
             album_id: album.id,
-            path,
+            path: imagePath, // 保存正確的路徑（R2 URL 或 Supabase 路徑）
             caption: image.caption,
             custom_link: null,
             sort_order: sortOrder,
