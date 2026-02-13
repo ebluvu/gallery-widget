@@ -317,13 +317,24 @@ function openCurrentImage(getCurrentImageFn) {
 
 function downloadCurrentImage(getCurrentImageFn) {
   const image = getCurrentImageFn();
-  const url = getImageUrl(image.path); // 使用原始URL
+  let url = getImageUrl(image.path, { preview: false }); // 使用原始URL
+  
+  // 如果是 R2 URL，使用 Worker 代理以繞過 CORS
+  if (isR2Url(url)) {
+    const objectKey = url.replace(R2_CONFIG.publicDomain, '').replace(/^\//, '');
+    url = `${R2_CONFIG.workerUrl}/file?key=${encodeURIComponent(objectKey)}`;
+  }
   
   try {
-    fetch(url)
+    fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'image/*'
+      }
+    })
       .then(response => {
         if (!response.ok) {
-          throw new Error('下載失敗');
+          throw new Error(`下載失敗: ${response.status} ${response.statusText}`);
         }
         return response.blob();
       })
@@ -339,6 +350,7 @@ function downloadCurrentImage(getCurrentImageFn) {
       })
       .catch(error => {
         console.error('下載錯誤:', error);
+        // 如果代理失敗，開新視窗讓用戶手動下載
         window.open(url, "_blank", "noopener");
         alert("若無法下載，請在新視窗中右鍵點擊圖片選擇另存新檔。");
       });
@@ -350,7 +362,13 @@ function downloadCurrentImage(getCurrentImageFn) {
 
 async function copyCurrentImage(getCurrentImageFn) {
   const image = getCurrentImageFn();
-  const url = getImageUrl(image.path); // 使用原始URL
+  let url = getImageUrl(image.path, { preview: false }); // 使用原始URL
+  
+  // 如果是 R2 URL，使用 Worker 代理以繞過 CORS
+  if (isR2Url(url)) {
+    const objectKey = url.replace(R2_CONFIG.publicDomain, '').replace(/^\//, '');
+    url = `${R2_CONFIG.workerUrl}/file?key=${encodeURIComponent(objectKey)}`;
+  }
   
   if (!navigator.clipboard || !window.ClipboardItem) {
     alert("此瀏覽器不支援複製圖片功能。");
@@ -358,9 +376,14 @@ async function copyCurrentImage(getCurrentImageFn) {
   }
   
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'image/*'
+      }
+    });
     if (!response.ok) {
-      throw new Error('無法載入圖片');
+      throw new Error(`無法載入圖片: ${response.status} ${response.statusText}`);
     }
     
     const blob = await response.blob();

@@ -159,6 +159,66 @@ export default {
           }
         }
         
+        // 處理文件獲取請求（用於下載/複製）：/file?key=...
+        if (url.pathname === '/file' || url.pathname.endsWith('/file')) {
+          const objectKey = url.searchParams.get('key');
+          
+          if (!objectKey) {
+            return new Response(
+              JSON.stringify({ error: '缺少 key 參數' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          if (!env.ALBUM_BUCKET) {
+            return new Response(
+              JSON.stringify({ error: 'R2 Bucket 未綁定' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          try {
+            // 從 R2 讀取文件
+            const object = await env.ALBUM_BUCKET.get(objectKey);
+            
+            if (!object) {
+              return new Response(
+                JSON.stringify({ error: '文件不存在' }),
+                { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+            
+            // 讀取文件數據
+            const buffer = await object.arrayBuffer();
+            
+            // 根據文件類型設置正確的 Content-Type
+            let contentType = 'application/octet-stream';
+            const ext = objectKey.split('.').pop()?.toLowerCase();
+            if (ext === 'png') contentType = 'image/png';
+            else if (ext === 'jpg' || ext === 'jpeg') contentType = 'image/jpeg';
+            else if (ext === 'gif') contentType = 'image/gif';
+            else if (ext === 'webp') contentType = 'image/webp';
+            
+            const responseHeaders = {
+              ...corsHeaders,
+              'Content-Type': contentType,
+              'Cache-Control': 'public, max-age=31536000',
+              'Content-Disposition': `attachment; filename="${objectKey.split('/').pop()}"`,
+              'Content-Length': buffer.byteLength.toString(),
+            };
+            
+            return new Response(buffer, {
+              status: 200,
+              headers: responseHeaders
+            });
+          } catch (error) {
+            return new Response(
+              JSON.stringify({ error: '讀取文件失敗：' + error.message }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+        
         // 檢查服務狀態
         return new Response(
           JSON.stringify({ 
